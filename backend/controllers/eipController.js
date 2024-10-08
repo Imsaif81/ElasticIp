@@ -65,12 +65,13 @@ const createEIPs = async (req, res) => {
           // Compare the first three octets to predefined range
           const firstThreeOctets = ip.split('.').slice(0, 3).join('.');
           if (predefinedIPs.includes(firstThreeOctets)) {
+            console.log(`IP ${ip} matched predefined range, allocating...`);
             session.allocatedIPs.push({ ip, allocationId });
           } else {
             // Release IP if it doesn't match the predefined range
+            console.log(`IP ${ip} did not match predefined range, releasing...`);
             const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
             await ec2Client.send(releaseCommand);
-            console.log(`Released IP ${ip} (not in predefined range)`);
             session.releasedIPs.push(ip);
           }
 
