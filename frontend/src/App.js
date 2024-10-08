@@ -4,12 +4,12 @@ import AwsForm from './components/AwsForm';
 import StatusDisplay from './components/StatusDisplay';
 import StopButton from './components/StopButton';
 import theme from './theme';
-import { v4 as uuidv4 } from 'uuid';  // Updated from uuidv4 to v4
+import { v4 as uuidv4 } from 'uuid';  // Import uuid for generating session ID
 import axios from 'axios';
 
 function App() {
   // Generate a session ID when the component mounts (it will be unique per tab/user)
-  const [sessionId] = useState(() => uuidv4());  // Using uuid v4 now
+  const [sessionId] = useState(() => uuidv4());  // uuidv4 generates a unique ID
   const [status, setStatus] = useState({
     createdIPs: [],
     allocatedIPs: [],
@@ -36,7 +36,7 @@ function App() {
     setLoading(true);
     try {
       // Send the AWS credentials and sessionId to the backend
-      const response = await axios.post('http://13.201.88.246:5000/create-eips', { accessKeyId, secretAccessKey, region, sessionId });
+      const response = await axios.post('http://15.206.212.193:5000/create-eips', { accessKeyId, secretAccessKey, region, sessionId });
 
       setStatus(response.data);
       toast({
@@ -46,7 +46,7 @@ function App() {
         isClosable: true,
       });
     } catch (error) {
-      console.error('Error creating IPs:', error.response ? error.response.data : error.message);  // Log exact error
+      console.error('Error creating IPs:', error.response ? error.response.data : error.message);
       toast({
         title: 'Error Creating IPs',
         description: error.message,
@@ -63,10 +63,10 @@ function App() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await axios.get(`http://13.201.88.246:5000/status?sessionId=${sessionId}`);
+        const response = await axios.get(`http://15.206.212.193:5000/status?sessionId=${sessionId}`);
         setStatus(response.data);
       } catch (error) {
-        console.error('Error fetching status:', error.response ? error.response.data : error.message);  // Log exact error
+        console.error('Error fetching status:', error.response ? error.response.data : error.message);
       }
     }, 5000);
 
@@ -75,7 +75,7 @@ function App() {
 
   const handleStop = async () => {
     try {
-      await axios.post('http://13.201.88.246:5000/stop-process', { sessionId });
+      await axios.post('http://15.206.212.193:5000/stop-process', { sessionId });
       toast({
         title: 'Process Stopped',
         status: 'info',
@@ -83,7 +83,7 @@ function App() {
         isClosable: true,
       });
     } catch (error) {
-      console.error('Error stopping process:', error.response ? error.response.data : error.message);  // Log exact error
+      console.error('Error stopping process:', error.response ? error.response.data : error.message);
     }
   };
 
