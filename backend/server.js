@@ -8,9 +8,6 @@ const { Sequelize } = require('sequelize');
 const path = require('path');
 const Session = require('./models/Session');  // Import the Session model correctly
 
-
-
-
 // Sequelize setup for PostgreSQL
 const sequelize = new Sequelize('elastic-ip-manager-db', 'ElasticIp', 'Mdsaif123', {
   host: 'elastic-ip-manager-db.cluster-clum0ygiqkzf.ap-south-1.rds.amazonaws.com',
@@ -36,8 +33,10 @@ app.use(express.json());
 
 // CORS Setup
 app.use(cors({
-  origin: ['http://15.206.212.193'],  // Replace with your frontend domain
-  credentials: true  // Allows credentials (cookies, etc.)
+  origin: '*',  // Allow all origins (you can restrict this to your frontend domain)
+  credentials: true,  // Allows credentials (cookies, etc.)
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Session Store setup
