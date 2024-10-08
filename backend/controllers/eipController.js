@@ -1,5 +1,5 @@
 const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand } = require('@aws-sdk/client-ec2');
-const Session = require('../models/Session');  // Sequelize Session model
+const Session = require('../models/Session');  // Custom Session model for tracking IP allocations
 
 // Predefined IP ranges to compare with
 const predefinedIPs = [
@@ -30,7 +30,13 @@ const createEIPs = async (req, res) => {
     let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
-      session = await Session.create({ sessionId, createdIPs: [], allocatedIPs: [], releasedIPs: [], batchSize: 5 });
+      session = await Session.create({
+        sessionId, 
+        createdIPs: [], 
+        allocatedIPs: [], 
+        releasedIPs: [], 
+        batchSize: 5
+      });
     } else {
       console.log(`Existing session found with sessionId: ${sessionId}`);
     }
@@ -64,6 +70,7 @@ const createEIPs = async (req, res) => {
             // Release IP if it doesn't match the predefined range
             const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
             await ec2Client.send(releaseCommand);
+            console.log(`Released IP ${ip} (not in predefined range)`);
             session.releasedIPs.push(ip);
           }
 
