@@ -5,7 +5,6 @@ const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const cors = require('cors');
 const eipController = require('./controllers/eipController');  // Your controller
 const { Sequelize } = require('sequelize');
-const path = require('path');
 const Session = require('./models/Session');  // Import the Session model correctly
 
 // Sequelize setup for PostgreSQL
@@ -85,13 +84,6 @@ app.get('/status', async (req, res) => {
     console.error(`Error fetching session data: ${error.message}`);
     res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
-});
-
-// Serve frontend (if applicable)
-app.use(express.static(path.join(__dirname, 'frontend', 'build')));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'));
 });
 
 // Start the server
