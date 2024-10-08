@@ -1,5 +1,5 @@
 const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand } = require('@aws-sdk/client-ec2');
-const Session = require('../models/Session');  // Custom Session model for tracking IP allocations
+const Session = require('../models/Session');  // Sequelize Session model
 
 // Predefined IP ranges to compare with
 const predefinedIPs = [
@@ -27,11 +27,10 @@ const createEIPs = async (req, res) => {
     console.log('Received custom sessionId from frontend:', sessionId);
 
     // Fetch or create a new session for the user
-    let session = await Session.findOne({ sessionId });
+    let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
-      session = new Session({ sessionId, createdIPs: [], allocatedIPs: [], releasedIPs: [], batchSize: 5 });
-      await session.save();
+      session = await Session.create({ sessionId, createdIPs: [], allocatedIPs: [], releasedIPs: [], batchSize: 5 });
     } else {
       console.log(`Existing session found with sessionId: ${sessionId}`);
     }
@@ -50,7 +49,7 @@ const createEIPs = async (req, res) => {
           const ip = allocateResponse.PublicIp;
           const allocationId = allocateResponse.AllocationId;
 
-          // Track created IPs in the MongoDB session to avoid duplication
+          // Track created IPs in the PostgreSQL session to avoid duplication
           if (session.createdIPs.includes(ip)) {
             console.log(`IP ${ip} already created in this session, skipping...`);
             continue;
@@ -110,7 +109,7 @@ const stopProcess = async (req, res) => {
     return res.status(400).json({ error: "Custom session ID is required to stop the process." });
   }
 
-  let session = await Session.findOne({ sessionId });
+  let session = await Session.findOne({ where: { sessionId } });
   if (session) {
     session.processRunning = false;
     await session.save();
