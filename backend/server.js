@@ -33,10 +33,10 @@ app.use(express.json());
 
 // CORS Setup
 app.use(cors({
-  origin: '*',  // Allow all origins (you can restrict this to your frontend domain)
+  origin: 'http://3.110.156.144',  // Your frontend domain
   credentials: true,  // Allows credentials (cookies, etc.)
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Session Store setup
