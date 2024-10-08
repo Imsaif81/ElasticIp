@@ -8,12 +8,10 @@ const predefinedIPs = [
   '43.205.71', '43.205.190'
 ];
 
-// Create Elastic IPs and manage the allocation process
 const createEIPs = async (req, res) => {
   try {
     const { accessKeyId, secretAccessKey, region, sessionId } = req.body;
 
-    // Ensure credentials, region, and sessionId are provided
     if (!accessKeyId || !secretAccessKey || !region) {
       console.error('Missing AWS credentials or region');
       return res.status(400).json({ error: "AWS credentials (accessKeyId, secretAccessKey) and region are required." });
@@ -23,13 +21,9 @@ const createEIPs = async (req, res) => {
       return res.status(400).json({ error: "Custom session ID is required." });
     }
 
-    // Log the sessionId received to ensure the correct custom session handling
-    console.log('Received custom sessionId from frontend:', sessionId);
-
     // Fetch or create a new session for the user
     let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
-      console.log(`Creating new session with sessionId: ${sessionId}`);
       session = await Session.create({
         sessionId, 
         createdIPs: [], 
@@ -37,8 +31,6 @@ const createEIPs = async (req, res) => {
         releasedIPs: [], 
         batchSize: 5
       });
-    } else {
-      console.log(`Existing session found with sessionId: ${sessionId}`);
     }
 
     const ec2Client = new EC2Client({
@@ -71,11 +63,13 @@ const createEIPs = async (req, res) => {
             // Release IP if it doesn't match the predefined range
             console.log(`IP ${ip} did not match predefined range, releasing...`);
             const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-            await ec2Client.send(releaseCommand);
+            await ec2Client.send(releaseCommand);  // Ensure this is actually executing
             session.releasedIPs.push(ip);
+            console.log(`IP ${ip} released successfully.`);
           }
 
           if (session.allocatedIPs.length >= 5) break;
+
         } catch (error) {
           console.error(`Error during IP allocation: ${error.stack || error.message}`);
           return res.status(500).json({ error: `Error allocating/releasing IP: ${error.message}` });
