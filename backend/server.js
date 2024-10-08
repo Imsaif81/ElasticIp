@@ -6,6 +6,8 @@ const cors = require('cors');
 const eipController = require('./controllers/eipController');  // Your controller
 const { Sequelize } = require('sequelize');
 const path = require('path');
+const Session = require('./models/Session');  // Import the Session model correctly
+
 
 
 
