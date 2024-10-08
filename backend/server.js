@@ -7,6 +7,8 @@ const eipController = require('./controllers/eipController');  // Your controlle
 const { Sequelize } = require('sequelize');
 const path = require('path');
 
+
+
 // Sequelize setup for PostgreSQL
 const sequelize = new Sequelize('elastic-ip-manager-db', 'ElasticIp', 'Mdsaif123', {
   host: 'elastic-ip-manager-db.cluster-clum0ygiqkzf.ap-south-1.rds.amazonaws.com',

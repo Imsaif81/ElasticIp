@@ -1,8 +1,11 @@
 // Import Sequelize and initialize the connection
 const { Sequelize, DataTypes } = require('sequelize');
 
-// Initialize Sequelize with your PostgreSQL credentials (we will update .env later)
-const sequelize = new Sequelize(process.env.DATABASE_URL);
+// Initialize Sequelize with your PostgreSQL credentials from .env
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  logging: false,  // Disable logging for cleaner console output (optional)
+});
 
 // Define the Session model using Sequelize
 const Session = sequelize.define('Session', {
@@ -36,6 +39,8 @@ const Session = sequelize.define('Session', {
 });
 
 // Sync the model with the database (creates table if it doesn't exist)
-sequelize.sync();
+sequelize.sync()
+  .then(() => console.log('Session table has been successfully created (or already exists)'))
+  .catch(err => console.error('Error syncing the Session model:', err));
 
 module.exports = Session;
