@@ -36,7 +36,7 @@ function App() {
     setLoading(true);
     try {
       // Send the AWS credentials and sessionId to the backend
-      const response = await axios.post('http://15.206.212.193:5000/create-eips', { accessKeyId, secretAccessKey, region, sessionId });
+      const response = await axios.post('http://3.110.156.144:5000/create-eips', { accessKeyId, secretAccessKey, region, sessionId });
 
       setStatus(response.data);
       toast({
@@ -63,7 +63,7 @@ function App() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await axios.get(`http://15.206.212.193:5000/status?sessionId=${sessionId}`);
+        const response = await axios.get(`http://3.110.156.144:5000/status?sessionId=${sessionId}`);
         setStatus(response.data);
       } catch (error) {
         console.error('Error fetching status:', error.response ? error.response.data : error.message);
@@ -75,7 +75,7 @@ function App() {
 
   const handleStop = async () => {
     try {
-      await axios.post('http://15.206.212.193:5000/stop-process', { sessionId });
+      await axios.post('http://3.110.156.144:5000/stop-process', { sessionId });
       toast({
         title: 'Process Stopped',
         status: 'info',
