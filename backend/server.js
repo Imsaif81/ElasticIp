@@ -68,7 +68,8 @@ app.get('/status', async (req, res) => {
   }
 
   try {
-    const session = await Session.findOne({ where: { sid: sessionId } });
+    // Fetch session using sessionId (correct column)
+    const session = await Session.findOne({ where: { sessionId } });
 
     if (!session) {
       return res.status(404).json({ error: `No session found for Session ID: ${sessionId}` });
@@ -96,4 +97,3 @@ app.get('*', (req, res) => {
 // Start the server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 module.exports = sequelize;
-

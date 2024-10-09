@@ -26,12 +26,12 @@ const createEIPs = async (req, res) => {
 
     console.log('Received AWS credentials and sessionId:', { accessKeyId, secretAccessKey, region, sessionId });
 
-    // Find or create a session using sid instead of sessionId
-    let session = await Session.findOne({ where: { sid: sessionId } });
+    // Find or create a session using sessionId
+    let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
       session = await Session.create({
-        sid: sessionId, 
+        sessionId, 
         createdIPs: [], 
         allocatedIPs: [], 
         releasedIPs: [], 
@@ -118,7 +118,7 @@ const stopProcess = async (req, res) => {
     return res.status(400).json({ error: "Custom session ID is required to stop the process." });
   }
 
-  let session = await Session.findOne({ where: { sid: sessionId } });
+  let session = await Session.findOne({ where: { sessionId } });
   if (session) {
     session.processRunning = false;
     await session.save();
