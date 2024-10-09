@@ -44,7 +44,6 @@ const Session = sequelize.define('Session', {
   timestamps: true  // Automatically adds createdAt and updatedAt fields
 });
 
-// Sync the model with the database (creates table if it doesn't exist)
-sequelize.sync();
+sequelize.sync({ alter: true });
 
 module.exports = Session;
