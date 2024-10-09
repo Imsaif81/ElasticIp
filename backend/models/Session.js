@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../config/database'); // Assuming your database connection is in a separate config file
+const sequelize = require('../server');  // Importing the Sequelize instance from server.js
 
 // Define the Session model using Sequelize
 const Session = sequelize.define('Session', {
