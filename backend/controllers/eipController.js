@@ -108,3 +108,4 @@ const createEIPs = async (req, res) => {
     res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 };
+module.exports = { createEIPs, stopProcess };
