@@ -1,14 +1,36 @@
-const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand, DescribeAddressesCommand } = require('@aws-sdk/client-ec2');
+const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand } = require('@aws-sdk/client-ec2');
 const Session = require('../models/Session');
 
 // Predefined IP ranges to compare with
 const predefinedIPs = [
-  '43.204.6', '43.204.10', '43.204.11', '43.204.16', 
-  '43.204.17', '43.204.21', '43.205.28', '43.205.57', 
+  '43.204.6', '43.204.10', '43.204.11', '43.204.16',
+  '43.204.17', '43.204.21', '43.205.28', '43.205.57',
   '43.205.71', '43.205.190'
 ];
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to release an Elastic IP
+const releaseElasticIP = async (ec2Client, allocationId, ip) => {
+  try {
+    const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
+    const releaseResponse = await ec2Client.send(releaseCommand);
+
+    console.log(`AWS release response for IP ${ip}: ${JSON.stringify(releaseResponse.$metadata)}`);
+
+    // Check if the release was successful based on the metadata
+    if (releaseResponse.$metadata.httpStatusCode === 200) {
+      console.log(`IP ${ip} successfully released.`);
+      return true;
+    } else {
+      console.log(`Failed to release IP ${ip}.`);
+      return false;
+    }
+  } catch (releaseError) {
+    console.error(`Error releasing IP ${ip}: ${releaseError.message}`);
+    return false;
+  }
+};
 
 // Create Elastic IPs and manage the allocation process
 const createEIPs = async (req, res) => {
@@ -31,10 +53,10 @@ const createEIPs = async (req, res) => {
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
       session = await Session.create({
-        sessionId, 
-        createdIPs: [], 
-        allocatedIPs: [], 
-        releasedIPs: [], 
+        sessionId,
+        createdIPs: [],
+        allocatedIPs: [],
+        releasedIPs: [],
         batchSize: 5
       });
     } else {
@@ -71,32 +93,13 @@ const createEIPs = async (req, res) => {
             session.allocatedIPs.push({ ip, allocationId });
           } else {
             console.log(`IP ${ip} did not match predefined range, releasing...`);
-            try {
-              const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-              const releaseResponse = await ec2Client.send(releaseCommand);
+            await delay(1000);  // 1-second delay before releasing the IP
 
-              console.log(`AWS release response for IP ${ip}: ${JSON.stringify(releaseResponse)}`);
-
-              // Additional validation to check if the IP is disassociated properly
-              if (releaseResponse.$metadata && releaseResponse.$metadata.httpStatusCode === 200) {
-                // Check if the IP is still in your account
-                const describeAddressesCommand = new DescribeAddressesCommand({ AllocationIds: [allocationId] });
-                const describeResponse = await ec2Client.send(describeAddressesCommand);
-
-                if (describeResponse.Addresses && describeResponse.Addresses.length === 0) {
-                  console.log(`IP ${ip} successfully released and verified.`);
-                  session.releasedIPs.push(ip);
-                } else {
-                  console.log(`IP ${ip} still exists in AWS. Release failed.`);
-                }
-              } else {
-                console.log(`Failed to release IP ${ip}. AWS response did not indicate success.`);
-              }
-            } catch (releaseError) {
-              console.error(`Error releasing IP ${ip}: ${releaseError.message}`);
+            if (!await releaseElasticIP(ec2Client, allocationId, ip)) {
+              console.log(`Failed to release IP ${ip}, skipping it in this session.`);
+            } else {
+              session.releasedIPs.push(ip);  // Only push if the release was successful
             }
-
-            await delay(1000);  // 1-second delay after releasing the IP
           }
 
           if (session.allocatedIPs.length >= 5) break;
@@ -112,7 +115,7 @@ const createEIPs = async (req, res) => {
 
       if (session.allocatedIPs.length < 5 && session.processRunning) {
         console.log(`Waiting 1 minute before the next batch.`);
-        await delay(60000);
+        await delay(60000);  // 1-minute delay between batches
       }
     }
 
