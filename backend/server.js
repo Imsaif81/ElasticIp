@@ -7,6 +7,9 @@ const eipController = require('./controllers/eipController');  // Your controlle
 const { Sequelize } = require('sequelize');
 const path = require('path');
 const Session = require('./models/Session');  // Import the Session model correctly
+// Import Sequelize instance
+const { sequelize } = require('./models/Session');  // Import sequelize from your model
+
 
 
 
