@@ -1,5 +1,12 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../server');  // Importing the Sequelize instance from server.js
+
+// Initialize Sequelize with your PostgreSQL database credentials directly
+const sequelize = new Sequelize('elastic-ip-manager-db', 'ElasticIp', 'Mdsaif123', {
+  host: 'elastic-ip-manager-db.cluster-clum0ygiqkzf.ap-south-1.rds.amazonaws.com',
+  dialect: 'postgres',
+  port: 5432,
+  logging: false  // Disable logging for production
+});
 
 // Define the Session model using Sequelize
 const Session = sequelize.define('Session', {
