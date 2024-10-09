@@ -10,30 +10,10 @@ const predefinedIPs = [
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Retry mechanism for releasing IP
-const releaseIpWithRetry = async (ec2Client, allocationId, retries = 3) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      console.log(`Attempting to release IP (AllocationId: ${allocationId}), attempt ${i + 1}`);
-      const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-      await ec2Client.send(releaseCommand);
-      console.log(`Successfully released IP (AllocationId: ${allocationId}) on attempt ${i + 1}`);
-      return true; // Success
-    } catch (error) {
-      console.error(`Error releasing IP on attempt ${i + 1}: ${error.message}`);
-      if (i === retries - 1) {
-        throw new Error(`Failed to release IP after ${retries} attempts: ${error.message}`);
-      }
-      await delay(1000); // Delay between retries
-    }
-  }
-};
-
+// Create Elastic IPs and manage the allocation process
 const createEIPs = async (req, res) => {
   try {
     const { accessKeyId, secretAccessKey, region, sessionId } = req.body;
-    // Log the sessionId received from the frontend
-    console.log(`Received session ID from frontend: ${sessionId}`);
 
     if (!accessKeyId || !secretAccessKey || !region) {
       console.error('Missing AWS credentials or region');
@@ -46,11 +26,12 @@ const createEIPs = async (req, res) => {
 
     console.log('Received AWS credentials and sessionId:', { accessKeyId, secretAccessKey, region, sessionId });
 
-    let session = await Session.findOne({ where: { sessionId } });
+    // Find or create a session using sid instead of sessionId
+    let session = await Session.findOne({ where: { sid: sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
       session = await Session.create({
-        sessionId, 
+        sid: sessionId, 
         createdIPs: [], 
         allocatedIPs: [], 
         releasedIPs: [], 
@@ -83,7 +64,6 @@ const createEIPs = async (req, res) => {
             continue;
           }
           session.createdIPs.push(ip);
-          await session.save();  // Save session after IP creation
 
           const firstThreeOctets = ip.split('.').slice(0, 3).join('.');
           if (predefinedIPs.includes(firstThreeOctets)) {
@@ -91,7 +71,8 @@ const createEIPs = async (req, res) => {
             session.allocatedIPs.push({ ip, allocationId });
           } else {
             console.log(`IP ${ip} did not match predefined range, releasing...`);
-            await releaseIpWithRetry(ec2Client, allocationId);
+            const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
+            await ec2Client.send(releaseCommand);  
             session.releasedIPs.push(ip);
             await delay(1000);  // 1-second delay after releasing the IP
             console.log(`IP ${ip} released successfully.`);
@@ -105,12 +86,12 @@ const createEIPs = async (req, res) => {
       }
 
       session.batchSize = 5 - session.allocatedIPs.length;
-      await session.save();  // Save session after each batch
+      await session.save();  
       console.log(`Batch completed. Current allocated IPs: ${session.allocatedIPs.length}`);
 
       if (session.allocatedIPs.length < 5 && session.processRunning) {
         console.log(`Waiting 1 minute before the next batch.`);
-        await delay(60000);  // 1-minute delay between batches
+        await delay(60000);  
       }
     }
 
@@ -137,7 +118,7 @@ const stopProcess = async (req, res) => {
     return res.status(400).json({ error: "Custom session ID is required to stop the process." });
   }
 
-  let session = await Session.findOne({ where: { sessionId } });
+  let session = await Session.findOne({ where: { sid: sessionId } });
   if (session) {
     session.processRunning = false;
     await session.save();
