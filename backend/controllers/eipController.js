@@ -16,7 +16,6 @@ const createEIPs = async (req, res) => {
   try {
     const { accessKeyId, secretAccessKey, region, sessionId } = req.body;
 
-    // Ensure credentials, region, and sessionId are provided
     if (!accessKeyId || !secretAccessKey || !region) {
       console.error('Missing AWS credentials or region');
       return res.status(400).json({ error: "AWS credentials (accessKeyId, secretAccessKey) and region are required." });
@@ -26,12 +25,8 @@ const createEIPs = async (req, res) => {
       return res.status(400).json({ error: "Custom session ID is required." });
     }
 
-    console.log('Received custom sessionId from frontend:', sessionId);
-
-    // Fetch or create a new session for the user
     let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
-      console.log(`Creating new session with sessionId: ${sessionId}`);
       session = await Session.create({
         sessionId, 
         createdIPs: [], 
@@ -39,8 +34,6 @@ const createEIPs = async (req, res) => {
         releasedIPs: [], 
         batchSize: 5
       });
-    } else {
-      console.log(`Existing session found with sessionId: ${sessionId}`);
     }
 
     const ec2Client = new EC2Client({
@@ -48,7 +41,6 @@ const createEIPs = async (req, res) => {
       credentials: { accessKeyId, secretAccessKey }
     });
 
-    // Allocate IPs until 5 valid IPs are found
     while (session.allocatedIPs.length < 5 && session.processRunning) {
       for (let i = 0; i < session.batchSize; i++) {
         try {
@@ -57,48 +49,36 @@ const createEIPs = async (req, res) => {
           const ip = allocateResponse.PublicIp;
           const allocationId = allocateResponse.AllocationId;
 
-          // Track created IPs in the PostgreSQL session to avoid duplication
           if (session.createdIPs.includes(ip)) {
-            console.log(`IP ${ip} already created in this session, skipping...`);
             continue;
           }
           session.createdIPs.push(ip);
 
-          // Compare the first three octets to predefined range
           const firstThreeOctets = ip.split('.').slice(0, 3).join('.');
           if (predefinedIPs.includes(firstThreeOctets)) {
-            console.log(`IP ${ip} matched predefined range, allocating...`);
             session.allocatedIPs.push({ ip, allocationId });
           } else {
-            // Release IP if it doesn't match the predefined range
-            console.log(`IP ${ip} did not match predefined range, releasing...`);
             const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-            await ec2Client.send(releaseCommand);  // Release the IP
+            await ec2Client.send(releaseCommand);  
             session.releasedIPs.push(ip);
-            console.log(`IP ${ip} released successfully.`);
-
-            // Introduce a 1-second delay after each IP release
-            await delay(1000);
+            await delay(1000);  // 1-second delay after releasing the IP
           }
 
           if (session.allocatedIPs.length >= 5) break;
         } catch (error) {
-          console.error(`Error during IP allocation: ${error.stack || error.message}`);
           return res.status(500).json({ error: `Error allocating/releasing IP: ${error.message}` });
         }
       }
 
       session.batchSize = 5 - session.allocatedIPs.length;
-      await session.save();  // Save the session state after each batch
+      await session.save();  
 
       if (session.allocatedIPs.length < 5 && session.processRunning) {
-        console.log(`Waiting 1 minute before next batch. Allocated IPs: ${session.allocatedIPs.length}`);
-        await new Promise(resolve => setTimeout(resolve, 60000));  // 1-minute delay between batches
+        await new Promise(resolve => setTimeout(resolve, 60000));  
       }
     }
 
-    await session.save();  // Save the final session state
-
+    await session.save();  
     res.status(200).json({
       message: "IP allocation process complete",
       createdIPs: session.createdIPs,
@@ -107,9 +87,27 @@ const createEIPs = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`Error during the IP allocation process: ${error.stack || error.message}`);
     res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 };
 
+// Stop the process for a specific session
+const stopProcess = async (req, res) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Custom session ID is required to stop the process." });
+  }
+
+  let session = await Session.findOne({ where: { sessionId } });
+  if (session) {
+    session.processRunning = false;
+    await session.save();
+    res.status(200).json({ message: "IP allocation process stopped for session: " + sessionId });
+  } else {
+    res.status(404).json({ error: "Session not found." });
+  }
+};
+
+// Export both functions
 module.exports = { createEIPs, stopProcess };
