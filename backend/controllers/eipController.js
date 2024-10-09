@@ -1,4 +1,4 @@
-const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand } = require('@aws-sdk/client-ec2');
+const { EC2Client, AllocateAddressCommand, ReleaseAddressCommand, DescribeAddressesCommand } = require('@aws-sdk/client-ec2');
 const Session = require('../models/Session');
 
 // Predefined IP ranges to compare with
@@ -30,14 +30,12 @@ const createEIPs = async (req, res) => {
     let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
-      
       session = await Session.create({
         sessionId, 
         createdIPs: [], 
         allocatedIPs: [], 
         releasedIPs: [], 
-        batchSize: 5,
-        processRunning: true
+        batchSize: 5
       });
     } else {
       console.log(`Existing session found with sessionId: ${sessionId}`);
@@ -72,31 +70,34 @@ const createEIPs = async (req, res) => {
             console.log(`IP ${ip} matched predefined range, allocating...`);
             session.allocatedIPs.push({ ip, allocationId });
           } else {
-           // Inside the IP allocation process
-console.log(`IP ${ip} did not match predefined range, releasing...`);
-try {
-  const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-  const releaseResponse = await ec2Client.send(releaseCommand);
-  
-  // Log the response from AWS
-  console.log(`AWS release response for IP ${ip}: ${JSON.stringify(releaseResponse)}`);
-  
-  // Check if the response was successful
-  if (releaseResponse) {
-    console.log(`IP ${ip} successfully released.`);
-    session.releasedIPs.push(ip);
-  } else {
-    console.log(`Failed to release IP ${ip}.`);
-  }
-} catch (releaseError) {
-  console.error(`Error releasing IP ${ip}: ${releaseError.message}`);
-}
-await delay(1000);  // 1-second delay after releasing the IP
+            console.log(`IP ${ip} did not match predefined range, releasing...`);
+            try {
+              const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
+              const releaseResponse = await ec2Client.send(releaseCommand);
 
+              console.log(`AWS release response for IP ${ip}: ${JSON.stringify(releaseResponse)}`);
+
+              // Additional validation to check if the IP is disassociated properly
+              if (releaseResponse.$metadata && releaseResponse.$metadata.httpStatusCode === 200) {
+                // Check if the IP is still in your account
+                const describeAddressesCommand = new DescribeAddressesCommand({ AllocationIds: [allocationId] });
+                const describeResponse = await ec2Client.send(describeAddressesCommand);
+
+                if (describeResponse.Addresses && describeResponse.Addresses.length === 0) {
+                  console.log(`IP ${ip} successfully released and verified.`);
+                  session.releasedIPs.push(ip);
+                } else {
+                  console.log(`IP ${ip} still exists in AWS. Release failed.`);
+                }
+              } else {
+                console.log(`Failed to release IP ${ip}. AWS response did not indicate success.`);
+              }
+            } catch (releaseError) {
+              console.error(`Error releasing IP ${ip}: ${releaseError.message}`);
+            }
+
+            await delay(1000);  // 1-second delay after releasing the IP
           }
-
-          // Save session state after each IP creation/release
-          await session.save();
 
           if (session.allocatedIPs.length >= 5) break;
         } catch (error) {
@@ -106,11 +107,12 @@ await delay(1000);  // 1-second delay after releasing the IP
       }
 
       session.batchSize = 5 - session.allocatedIPs.length;
+      await session.save();
       console.log(`Batch completed. Current allocated IPs: ${session.allocatedIPs.length}`);
 
       if (session.allocatedIPs.length < 5 && session.processRunning) {
         console.log(`Waiting 1 minute before the next batch.`);
-        await delay(60000);  
+        await delay(60000);
       }
     }
 
