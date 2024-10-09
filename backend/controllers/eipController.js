@@ -72,12 +72,27 @@ const createEIPs = async (req, res) => {
             console.log(`IP ${ip} matched predefined range, allocating...`);
             session.allocatedIPs.push({ ip, allocationId });
           } else {
-            console.log(`IP ${ip} did not match predefined range, releasing...`);
-            const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
-            await ec2Client.send(releaseCommand);  
-            session.releasedIPs.push(ip);
-            await delay(1000);  // 1-second delay after releasing the IP
-            console.log(`IP ${ip} released successfully.`);
+           // Inside the IP allocation process
+console.log(`IP ${ip} did not match predefined range, releasing...`);
+try {
+  const releaseCommand = new ReleaseAddressCommand({ AllocationId: allocationId });
+  const releaseResponse = await ec2Client.send(releaseCommand);
+  
+  // Log the response from AWS
+  console.log(`AWS release response for IP ${ip}: ${JSON.stringify(releaseResponse)}`);
+  
+  // Check if the response was successful
+  if (releaseResponse) {
+    console.log(`IP ${ip} successfully released.`);
+    session.releasedIPs.push(ip);
+  } else {
+    console.log(`Failed to release IP ${ip}.`);
+  }
+} catch (releaseError) {
+  console.error(`Error releasing IP ${ip}: ${releaseError.message}`);
+}
+await delay(1000);  // 1-second delay after releasing the IP
+
           }
 
           // Save session state after each IP creation/release
