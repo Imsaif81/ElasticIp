@@ -30,12 +30,14 @@ const createEIPs = async (req, res) => {
     let session = await Session.findOne({ where: { sessionId } });
     if (!session) {
       console.log(`Creating new session with sessionId: ${sessionId}`);
+      
       session = await Session.create({
         sessionId, 
         createdIPs: [], 
         allocatedIPs: [], 
         releasedIPs: [], 
-        batchSize: 5
+        batchSize: 5,
+        processRunning: true
       });
     } else {
       console.log(`Existing session found with sessionId: ${sessionId}`);
@@ -78,6 +80,9 @@ const createEIPs = async (req, res) => {
             console.log(`IP ${ip} released successfully.`);
           }
 
+          // Save session state after each IP creation/release
+          await session.save();
+
           if (session.allocatedIPs.length >= 5) break;
         } catch (error) {
           console.error(`Error during IP allocation: ${error.stack || error.message}`);
@@ -86,7 +91,6 @@ const createEIPs = async (req, res) => {
       }
 
       session.batchSize = 5 - session.allocatedIPs.length;
-      await session.save();  
       console.log(`Batch completed. Current allocated IPs: ${session.allocatedIPs.length}`);
 
       if (session.allocatedIPs.length < 5 && session.processRunning) {
@@ -95,7 +99,7 @@ const createEIPs = async (req, res) => {
       }
     }
 
-    await session.save();  
+    await session.save();
     console.log('IP allocation process complete');
     res.status(200).json({
       message: "IP allocation process complete",

@@ -5,7 +5,7 @@ const sequelize = new Sequelize('elastic-ip-manager-db', 'ElasticIp', 'Mdsaif123
   host: 'elastic-ip-manager-db.cluster-clum0ygiqkzf.ap-south-1.rds.amazonaws.com',
   dialect: 'postgres',
   port: 5432,
-  logging: false  // Disable logging for production
+  logging: console.log,  // Enable logging for debugging
 });
 
 // Define the Session model using Sequelize
