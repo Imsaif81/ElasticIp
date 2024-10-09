@@ -10,6 +10,11 @@ const sequelize = new Sequelize('elastic-ip-manager-db', 'ElasticIp', 'Mdsaif123
 
 // Define the Session model using Sequelize
 const Session = sequelize.define('Session', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true, // Automatically increments the id value for each new entry
+    primaryKey: true     // Marks this as the primary key column
+  },
   sessionId: {
     type: DataTypes.STRING,
     allowNull: false,
