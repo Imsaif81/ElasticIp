@@ -93,6 +93,25 @@ const createEIPs = async (req, res) => {
         await delay(60000);  
       }
     }
+    // Stop the process for a specific session
+const stopProcess = async (req, res) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Custom session ID is required to stop the process." });
+  }
+
+  let session = await Session.findOne({ where: { sessionId } });
+  if (session) {
+    session.processRunning = false;
+    await session.save();
+    console.log(`IP allocation process stopped for session: ${sessionId}`);
+    res.status(200).json({ message: "IP allocation process stopped for session: " + sessionId });
+  } else {
+    res.status(404).json({ error: "Session not found." });
+  }
+};
+
 
     await session.save();  
     console.log('IP allocation process complete');
