@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@aws-sdk/client-ec2": "^3.667.0",
     "mongodb": "^6.9.0",
     "mongosh": "^2.3.1"
   }
