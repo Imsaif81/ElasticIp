@@ -93,7 +93,23 @@ const createEIPs = async (req, res) => {
         await delay(60000);  
       }
     }
-    // Stop the process for a specific session
+
+    await session.save();  
+    console.log('IP allocation process complete');
+    res.status(200).json({
+      message: "IP allocation process complete",
+      createdIPs: session.createdIPs,
+      allocatedIPs: session.allocatedIPs,
+      releasedIPs: session.releasedIPs
+    });
+
+  } catch (error) {
+    console.error(`Error during the IP allocation process: ${error.stack || error.message}`);
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
+  }
+};
+
+// Stop the process for a specific session
 const stopProcess = async (req, res) => {
   const { sessionId } = req.body;
 
@@ -112,19 +128,4 @@ const stopProcess = async (req, res) => {
   }
 };
 
-
-    await session.save();  
-    console.log('IP allocation process complete');
-    res.status(200).json({
-      message: "IP allocation process complete",
-      createdIPs: session.createdIPs,
-      allocatedIPs: session.allocatedIPs,
-      releasedIPs: session.releasedIPs
-    });
-
-  } catch (error) {
-    console.error(`Error during the IP allocation process: ${error.stack || error.message}`);
-    res.status(500).json({ error: `Internal server error: ${error.message}` });
-  }
-};
 module.exports = { createEIPs, stopProcess };
