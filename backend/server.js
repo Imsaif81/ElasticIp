@@ -58,6 +58,7 @@ sessionStore.sync();  // Sync session store
 app.post('/create-eips', eipController.createEIPs);
 app.post('/stop-process', eipController.stopProcess);
 
+
 // Route to fetch the status of the current session
 app.get('/status', async (req, res) => {
   const { sessionId } = req.query;
