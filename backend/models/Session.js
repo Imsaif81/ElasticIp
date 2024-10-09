@@ -1,12 +1,12 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize(process.env.DATABASE_URL);
+const sequelize = require('../config/database'); // Assuming your database connection is in a separate config file
 
+// Define the Session model using Sequelize
 const Session = sequelize.define('Session', {
   sessionId: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
-    primaryKey: true  // Mark sessionId as the primary key
+    unique: true
   },
   createdIPs: {
     type: DataTypes.ARRAY(DataTypes.STRING),
@@ -29,13 +29,10 @@ const Session = sequelize.define('Session', {
     defaultValue: true
   }
 }, {
-  timestamps: true,
-  // Disable Sequelize's automatic addition of the `id` field:
-  freezeTableName: true,
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  timestamps: true  // Automatically adds createdAt and updatedAt fields
 });
 
+// Sync the model with the database (creates table if it doesn't exist)
 sequelize.sync();
 
 module.exports = Session;
